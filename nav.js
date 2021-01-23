@@ -1,6 +1,6 @@
-var http = require("http")
+const http = require("http")
 
-var options = {
+const options = {
     host: 'codequiz.azurewebsites.net',
     path: '/',
     method: 'GET',
@@ -11,18 +11,39 @@ var options = {
 
 callback = function(response) {
     const param = process.argv[2]
-
     var str = ''
+
     response.on('data', function (chunk) {
         str += chunk
     });
 
     response.on('end', function () {
-        console.log(str)
+        let splitHtml = str.slice(str.indexOf('<tr>'))
+        let data = {}
+
+        while (splitHtml.length > 0) {
+            const endOfRowIndex = splitHtml.indexOf('</td></tr>')
+            const startOfRowIndex = splitHtml.indexOf('<tr><td>') + 10
+
+            if (endOfRowIndex < 0) {
+                splitHtml = ''
+                continue
+            }
+
+            const row = splitHtml.slice(startOfRowIndex, endOfRowIndex)
+            const rowDataList = row.split('</td><td>')
+            const key = rowDataList[0]
+            rowDataList.shift()
+            data[key] = [...rowDataList]
+            splitHtml = splitHtml.slice(endOfRowIndex + 10)
+        }
+
+        const result = (param) ? data[param][0] : 'N/A'
+
+        console.log(`NAV of ${param || 'none'}:`, result)
     })
 }
 
-var req = http.request(options, callback)
-//This is the data we are posting, it needs to be a string or a buffer
-req.write("Test project!")
-req.end()
+const req = http.request(options, callback)
+req.write("Test Project");
+req.end();
